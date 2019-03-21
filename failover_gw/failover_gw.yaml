@@ -1,0 +1,10 @@
+# Configuration
+poll_interval: 10
+gw_interface: eth0
+#check_ip: 146.178.211.25
+check_ip: 8.8.8.8
+managed_route: 146.178.211.0/24
+primary_gw: 192.168.90.2
+backup_gw: 192.168.90.3
+ping_timeout: 2000
+ping_count: 3
