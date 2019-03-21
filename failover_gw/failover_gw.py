@@ -5,10 +5,13 @@ from arprequest import ArpRequest
 from pyping import *
 import subprocess
 import re
+import logging
+
+logging.basicConfig(level="INFO")
 
 def get_route_gw(route):
     res = subprocess.check_output([ 'ip', 'route', 'list', route ])
-    #print res
+    logging.debug("subprocess returned %s", res)
 
     p = re.compile(".*via ([^ ]*) .*")
     m = p.match(res)
@@ -20,7 +23,7 @@ def get_route_gw(route):
 
 def replace_route(route, gw):
     res = subprocess.check_output([ 'ip', 'route', 'replace', route, 'via', gw])
-    #print res
+    logging.debug("subprocess returned %s", res)
     return True
 
 def main():
@@ -37,7 +40,7 @@ def main():
     ping_timeout = config['ping_timeout'] or 2000
     ping_count = config['ping_count'] or  3
 
-    print("Started")
+    logging.info("Started")
 
     while True:
         # Arp request primary and backup gateway looking for a response
@@ -53,15 +56,16 @@ def main():
             res = ping_via_primary.run(ping_count)
 
             if res.ret_code == 0:
-                print("Ping {} via {} RTT={},{},{}ms".format(
-                        check_ip, primary_gw, res.min_rtt, res.avg_rtt, res.max_rtt))
+                logging.info("Ping %s via %s RTT=%.3f,%.3f,%.3fms",
+                             check_ip, primary_gw,
+                             res.min_rtt, res.avg_rtt, res.max_rtt)
                 primary_gw_up = True
             else:
-                print("Ping {} via {} failed : {}",format(
-                        check_ip, primary_gw, res.output))
+                logging.info("Ping %s via %s failed : %s",
+                             check_ip, primary_gw, res.output)
                 primary_gw_up = False
         else:
-            print("Primary gateway {} is down".format(primary_gw))
+            logging.info("Primary gateway %s is down", primary_gw)
             primary_gw_up = False
 
         arp_backup = ArpRequest(backup_gw, gw_interface)
@@ -76,32 +80,36 @@ def main():
             res = ping_via_backup.run(ping_count)
 
             if res.ret_code == 0:
-                print("Ping {} via {} RTT={},{},{}ms".format(
-                        check_ip, backup_gw, res.min_rtt, res.avg_rtt, res.max_rtt))
+                logging.info("Ping %s via %s RTT=%.3f,%.3f,%.3fms",
+                             check_ip, backup_gw,
+                             res.min_rtt, res.avg_rtt, res.max_rtt)
                 backup_gw_up = True
             else:
-                print("Ping {} via {} failed : {}",format(
-                        check_ip, backup_gw, res.output))
+                logging.info("Ping %s via %s failed : %s",
+                             check_ip, backup_gw, res.output)
                 backup_gw_up = False
             backup_gw_up = (res.ret_code == 0)
         else:
-            print("Backup gateway {} is down".format(backup_gw))
+            logging.info("Backup gateway %s is down", backup_gw)
             backup_gw_up = False
 
-        print("primary ARP is {} GW is {} secondary ARP is {} GW is {}".format(
-                primary_is_up, primary_gw_up, backup_is_up, backup_gw_up))
+        logging.debug("primary gateway ARP is %d GW is %d secondary gateway ARP is %d GW is %d",
+                      primary_is_up, primary_gw_up, backup_is_up, backup_gw_up)
 
         current_gw = get_route_gw(managed_route)
         if primary_gw_up:
             if managed_route and current_gw != primary_gw:
-                print("Switch route {} to primary gateway {}".format(managed_route, primary_gw))
+                logging.info("Switch route %s to primary gateway %s",
+                             managed_route, primary_gw)
                 replace_route(managed_route, primary_gw)
         elif backup_gw_up:
             if managed_route and current_gw != backup_gw:
-                print("Switch route {} to backup gateway {}".format(managed_route, backup_gw))
+                logging.info("Switch route %s to backup gateway %s",
+                             managed_route, backup_gw)
                 replace_route(managed_route, backup_gw)
         else:
-            print("No routes for {} as neither gateway responding for {}".format(managed_route, check_ip))
+            logging.info("No routes for %s as neither gateway responding for %s",
+                         managed_route, check_ip)
 
         time.sleep(config['poll_interval'])
 

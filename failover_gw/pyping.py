@@ -253,9 +253,9 @@ class Ping(object):
 		if self.receive_count > 0:
 			msg = "round-trip (ms)  min/avg/max = %0.3f/%0.3f/%0.3f" % (self.min_time, self.total_time / self.receive_count, self.max_time)
 			if self.quiet_output:
-				self.response.min_rtt = '%.3f' % self.min_time
-				self.response.avg_rtt = '%.3f' % (self.total_time / self.receive_count)
-				self.response.max_rtt = '%.3f' % self.max_time
+				self.response.min_rtt = self.min_time
+				self.response.avg_rtt = self.total_time / self.receive_count
+				self.response.max_rtt = self.max_time
 				self.response.output.append(msg)
 			else:
 				print(msg)
