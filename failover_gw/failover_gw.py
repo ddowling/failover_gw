@@ -7,8 +7,6 @@ import subprocess
 import re
 import logging
 
-logging.basicConfig(level="INFO")
-
 def get_route_gw(route):
     res = subprocess.check_output([ 'ip', 'route', 'list', route ])
     logging.debug("subprocess returned %s", res)
@@ -30,6 +28,14 @@ def main():
     config_file = "failover_gw.yaml"
 
     config = yaml.safe_load(open(config_file, 'r'))
+
+    if config['debug']:
+        log_level = "DEBUG"
+    else:
+        log_level = "INFO"
+
+    log_format='%(asctime)s (%(levelname)s) %(message)s'
+    logging.basicConfig(level=log_level, format=log_format)
 
     poll_interval = config['poll_interval'] or 10
     gw_interface = config['gw_interface'] or 'eth0'
@@ -56,12 +62,12 @@ def main():
             res = ping_via_primary.run(ping_count)
 
             if res.ret_code == 0:
-                logging.info("Ping %s via %s RTT=%.3f,%.3f,%.3fms",
+                logging.info("Ping %s via primary gateway %s RTT=%.3f,%.3f,%.3fms",
                              check_ip, primary_gw,
                              res.min_rtt, res.avg_rtt, res.max_rtt)
                 primary_gw_up = True
             else:
-                logging.info("Ping %s via %s failed : %s",
+                logging.info("Ping %s via primary gateway %s failed : %s",
                              check_ip, primary_gw, res.output)
                 primary_gw_up = False
         else:
@@ -80,12 +86,12 @@ def main():
             res = ping_via_backup.run(ping_count)
 
             if res.ret_code == 0:
-                logging.info("Ping %s via %s RTT=%.3f,%.3f,%.3fms",
+                logging.info("Ping %s via backup gateway %s RTT=%.3f,%.3f,%.3fms",
                              check_ip, backup_gw,
                              res.min_rtt, res.avg_rtt, res.max_rtt)
                 backup_gw_up = True
             else:
-                logging.info("Ping %s via %s failed : %s",
+                logging.info("Ping %s via backup gateway %s failed : %s",
                              check_ip, backup_gw, res.output)
                 backup_gw_up = False
             backup_gw_up = (res.ret_code == 0)
