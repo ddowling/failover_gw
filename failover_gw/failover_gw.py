@@ -9,7 +9,8 @@ import logging
 
 def get_route_gw(route):
     res = subprocess.check_output([ 'ip', 'route', 'list', route ])
-    logging.debug("subprocess returned %s", res)
+    res = res.decode('utf-8')
+    logging.debug("'ip route list %s' returned '%s'", route, res)
 
     p = re.compile(".*via ([^ ]*) .*")
     m = p.match(res)
@@ -21,7 +22,8 @@ def get_route_gw(route):
 
 def replace_route(route, gw):
     res = subprocess.check_output([ 'ip', 'route', 'replace', route, 'via', gw])
-    logging.debug("subprocess returned %s", res)
+    res = res.decode('utf-8')
+    logging.debug("'ip route replace %s via %s' returned '%s'", route, gw, res)
     return True
 
 def main():
@@ -103,6 +105,7 @@ def main():
                       primary_is_up, primary_gw_up, backup_is_up, backup_gw_up)
 
         current_gw = get_route_gw(managed_route)
+        logging.debug("Current gateway %s" % current_gw)
         if primary_gw_up:
             if managed_route and current_gw != primary_gw:
                 logging.info("Switch route %s to primary gateway %s",
