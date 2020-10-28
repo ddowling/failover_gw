@@ -7,7 +7,7 @@
 # copies of this license document, and changing it is allowed as long
 # as the name is changed.
 #
-# Edits by Denis Dowling (2018)
+# Edits by Denis Dowling (2018,2020)
 
 import socket
 from struct import pack, unpack
@@ -22,7 +22,7 @@ def val2int(val):
     '''Retourne une valeur sous forme d'octet en valeur sous forme
        d'entier.'''
 
-    return int(''.join(['%02d'%ord(c) for c in val]), 16)
+    return int(''.join(['%02d'%c for c in val]), 16)
 
 class TimeoutError(Exception):
     '''Exception levée après un timeout.'''
@@ -72,11 +72,12 @@ class ArpRequest:
 
     def _get_if_ip(self, ifname):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        ifname_b = ifname[:15].encode('utf-8')
         info = fcntl.ioctl(s.fileno(),
                            0x8915,  # SIOCGIFADDR
-                           struct.pack('256s', ifname[:15]))
+                           struct.pack('256s', ifname_b))
         packed_ip = info[20:24]
-        return '.'.join([ str(ord(c)) for c in packed_ip ])
+        return '.'.join([ str(c) for c in packed_ip ])
 
     def request(self):
         ''' Generate ARP request and wait for a response '''
@@ -140,8 +141,7 @@ class ArpRequest:
             pack('!4B', *[int(x) for x in self.ipaddr.split('.')])
         ]
 
-        self.socket.send(''.join(frame)) # Envois de la trame sur le
-        # réseau
+        self.socket.send(b''.join(frame))
 
 
     def _wait_response(self):
@@ -180,7 +180,7 @@ class ArpRequest:
             if src_pt == pack('!4B',
                              *[int(x) for x in self.ipaddr.split('.')]):
 
-                self.hw_addr = [ ord(c) for c in src_hw ]
+                self.hw_addr = src_hw
 
                 return True # Quand on a trouvé, on arrete de chercher !
                 # Et oui, c'est mal de faire un retour dans une boucle,
