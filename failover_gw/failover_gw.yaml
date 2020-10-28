@@ -1,9 +1,10 @@
 # Configuration
 poll_interval: 10
-gw_interface: eth0
+gw_interface: ens33
 check_ip: 8.8.8.8
 managed_route: 0.0.0.0/0
 primary_gw: 192.168.90.2
 backup_gw: 192.168.90.3
 ping_timeout: 2000
 ping_count: 3
+debug: false

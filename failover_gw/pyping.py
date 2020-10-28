@@ -114,19 +114,21 @@ def to_ip_components(addr):
 
 def get_if_ip(ifname):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    ifname_b = ifname[:15].encode('utf-8')
     info = fcntl.ioctl(s.fileno(),
                0x8915,  # SIOCGIFADDR
-               struct.pack('256s', ifname[:15]))
+               struct.pack('256s', ifname_b))
 
     return socket.inet_ntoa(info[20:24])
 
 def get_if_mac(ifname):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    ifname_b = ifname[:15].encode('utf-8')
     info = fcntl.ioctl(s.fileno(),
                0x8927,
-               struct.pack('256s', ifname[:15]))
+               struct.pack('256s', ifname_b))
 
-    return [ ord(c) for c in info[18:24] ]
+    return info[18:24]
 
 class Response(object):
     def __init__(self):
@@ -411,12 +413,12 @@ class Ping(object):
                 local_ip = get_if_ip(self.source_interface)
                 local_mac = get_if_mac(self.source_interface)
 
-                ethernet_hdr = self.dest_mac + local_mac + [0x08, 0x00]
+                ethernet_hdr = self.dest_mac + local_mac + b'\x08\x00'
 
                 plen = len(packet) + 20
                 ip_hdr = [0x45,
                       0x00,
-                      plen/256, plen%256,
+                      plen//256, plen%256,
                       0x80, 0xc6,
                       0x40, 0x00,
                       0x40,
@@ -427,7 +429,7 @@ class Ping(object):
 
                 # 16-bit sum as per https://en.wikipedia.org/wiki/IPv4_header_checksum
                 csum = 0
-                for i in range(len(ip_hdr)/2):
+                for i in range(len(ip_hdr)//2):
                     v = (ip_hdr[2*i]<<8) | ip_hdr[2*i+1]
                     csum += v
 
@@ -437,9 +439,8 @@ class Ping(object):
                 ip_hdr[10] = (csum>>8) & 0xff
                 ip_hdr[11] = csum & 0xff
 
-                ethernet_hdr_str = "".join(map(chr, ethernet_hdr))
-                ip_hdr_str = "".join(map(chr, ip_hdr))
-                current_socket.send(ethernet_hdr_str + ip_hdr_str + packet)
+                ip_hdr_b = bytes(ip_hdr)
+                current_socket.send(ethernet_hdr + ip_hdr_b + packet)
             else:
                 current_socket.sendto(packet, (self.destination, 1))
         except socket.error as e:
